@@ -1,1 +1,147 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MAX_PROCESOS 100
 
+typedef struct {
+    int id;
+    int tamaño;
+    int inicio;
+    int activo; 
+} Proceso;
+
+Proceso memoria[MAX_PROCESOS];
+int totalMemoria;
+int cantidadProcesos = 0;
+int idActual = 1;
+
+void mostrarMemoria() {
+    printf("\nEstado de la memoria:\n");
+    for (int i = 0; i < cantidadProcesos; i++) {
+        if (memoria[i].activo) {
+            printf("Proceso ID %d | Tamaño: %d | Inicio: %d\n",
+                   memoria[i].id, memoria[i].tamaño, memoria[i].inicio);
+        }
+    }
+}
+
+int espacioDisponibleEn(int indice) {
+    if (indice == cantidadProcesos) return totalMemoria;
+    return memoria[indice].inicio;
+}
+
+void insertarProceso(int tamaño) {
+    int i=0, j=0;
+    int encontrado = 0;
+    int inicio = 0;
+
+    for (i = 0; i <= cantidadProcesos; i++) {
+        int espacioLibre;
+        if (i == 0) {
+            espacioLibre = (cantidadProcesos == 0) ? totalMemoria : memoria[0].inicio;
+        } else if (i == cantidadProcesos) {
+            espacioLibre = totalMemoria - memoria[i - 1].inicio - memoria[i - 1].tamaño;
+            inicio = memoria[i - 1].inicio + memoria[i - 1].tamaño;
+        } else {
+            espacioLibre = memoria[i].inicio - (memoria[i - 1].inicio + memoria[i - 1].tamaño);
+            inicio = memoria[i - 1].inicio + memoria[i - 1].tamaño;
+        }
+
+        if (espacioLibre >= tamaño) {
+            encontrado = 1;
+            break;
+        }
+    }
+
+    if (!encontrado) {
+        printf("No hay espacio contiguo suficiente, desfragmentando...\n");
+        int posicion = 0;
+        for (j = 0; j < cantidadProcesos; j++) {
+            if (memoria[j].activo) {
+                memoria[j].inicio = posicion;
+                posicion += memoria[j].tamaño;
+            }
+        }
+
+        // Intentar insertar de nuevo
+        if ((totalMemoria - posicion) >= tamaño) {
+            memoria[cantidadProcesos].id = idActual++;
+            memoria[cantidadProcesos].tamaño = tamaño;
+            memoria[cantidadProcesos].inicio = posicion;
+            memoria[cantidadProcesos].activo = 1;
+            cantidadProcesos++;
+            printf("Proceso insertado tras desfragmentar.\n");
+        } else {
+            printf("Aún no hay suficiente memoria.\n");
+        }
+
+    } else {
+
+        for (j = cantidadProcesos; j > i; j--) {
+            memoria[j] = memoria[j - 1];
+        }
+        memoria[i].id = idActual++;
+        memoria[i].tamaño = tamaño;
+        memoria[i].inicio = inicio;
+        memoria[i].activo = 1;
+        cantidadProcesos++;
+        printf("Proceso insertado.\n");
+    }
+}
+
+void eliminarProceso(int id) {
+    int encontrado = 0;
+    for (i = 0; i < cantidadProcesos; i++) {
+        if (memoria[i].id == id && memoria[i].activo) {
+            memoria[i].activo = 0;
+            encontrado = 1;
+            printf("Proceso ID %d eliminado.\n", id);
+            break;
+        }
+    }
+    if (!encontrado) {
+        printf("Proceso con ID %d no encontrado.\n", id);
+    }
+}
+
+// Menú principal
+void menu() {
+    int opcion, tamaño, id;
+    do {
+        printf("\n--- Gestión de Memoria ---\n");
+        printf("1. Ingresar un nuevo proceso\n");
+        printf("2. Eliminar un proceso existente\n");
+        printf("3. Mostrar estado de la memoria\n");
+        printf("4. Salir\n");
+        printf("Opción: ");
+        scanf("%d", &opcion);
+
+        switch (opcion) {
+            case 1:
+                printf("Ingrese el tamaño del nuevo proceso: ");
+                scanf("%d", &tamaño);
+                insertarProceso(tamaño);
+                break;
+            case 2:
+                printf("Ingrese el ID del proceso a eliminar: ");
+                scanf("%d", &id);
+                eliminarProceso(id);
+                break;
+            case 3:
+                mostrarMemoria();
+                break;
+            case 4:
+                printf("Saliendo...\n");
+                break;
+            default:
+                printf("Opción inválida.\n");
+        }
+    } while (opcion != 4);
+}
+
+int main() {
+    printf("Ingrese el tamaño total de la memoria: ");
+    scanf("%d", &totalMemoria);
+    menu();
+    return 0;
+}
